@@ -10,7 +10,9 @@
 void print_array(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end);
 void chomp(char *s);
 int get_strings_in_file(FILE *fp, char entries[MAX_ENTRY_SIZE][MAX_STRING_LENGTH]);
-void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target, int *count);
+void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target);
+
+void print_var(char testo[24], int *n);
 
 // Usage: splitsearch <string> <dictionary_file>
 
@@ -20,6 +22,7 @@ int main(int argc, char *argv[])
 
   char *target = argv[1];
   char *input_file = argv[2];
+  
   // parse file for values
   FILE *fp;
   if((fp = fopen(input_file, "r")) == NULL)
@@ -51,11 +54,10 @@ int main(int argc, char *argv[])
   //end test
 
   // splitsearch
-  int count = 0;
-  int pid = getpid();
-  splitsearch(lines, 0, n_lines, target, &count);
 
-  if(count < 1 && (pid == getpid()))
+  splitsearch(lines, 0, n_lines, target);
+
+  if(0 < 1)
     printf("NO MATCH found.\n");
 
   exit(0);
@@ -101,30 +103,50 @@ int get_strings_in_file(FILE *fp, char entries[MAX_ENTRY_SIZE][MAX_STRING_LENGTH
   return lines;
 }
 
-// SplitSearch forking function
-void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target, int *count)
+void print_var(char testo[24], int *n)
 {
+        printf("%24s: %p - %i\n", testo, n, *n);
+}
+
+// SplitSearch forking function
+void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target)
+{
+  int fd[2];
+    
+  if(pipe(fd) == -1)
+  {
+      perror("Pipe");
+      exit(1);
+  }
+    
   if(start == end)
   {
     if(strcmp(target, array[start]) == 0)
     {
-      (*count)++;
-
-      printf("---Count at(%X): %d.\n", &count, *count);
       printf("FOUND at line %02d.\n", start + 1);
     }
   }
   else
-  {
+  {     
     int mid = (start + end) / 2;
-
-    if(fork() == 0)
+    
+    int pid_figlio = fork();
+    
+    if(pid_figlio < 0)
     {
-      splitsearch(array, start, mid, target, count);
+        perror("Unable to fork");
+        exit(1);
+    }
+    else if(pid_figlio == 0)
+    {
+      splitsearch(array, start, mid, target);
+      exit(0);
     }
     else
     {
-      splitsearch(array, mid + 1, end, target, count);
+      splitsearch(array, mid + 1, end, target);
+      int status;
+      waitpid(pid_figlio, &status, 0);
     }
   }
 }
