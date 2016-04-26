@@ -10,7 +10,7 @@
 void print_array(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end);
 void chomp(char *s);
 int get_strings_in_file(FILE *fp, char entries[MAX_ENTRY_SIZE][MAX_STRING_LENGTH]);
-void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target);
+void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target, int *count);
 
 void print_var(char testo[24], int *n);
 
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 
   char *target = argv[1];
   char *input_file = argv[2];
-  
+
   // parse file for values
   FILE *fp;
   if((fp = fopen(input_file, "r")) == NULL)
@@ -55,10 +55,15 @@ int main(int argc, char *argv[])
 
   // splitsearch
 
-  splitsearch(lines, 0, n_lines, target);
+  int count = 0;
+  int pid = getpid();
+  splitsearch(lines, 0, n_lines, target, &count);
 
-  if(0 < 1)
+  if(count < 1 && pid == getpid())
+  {
+    print_var("MAIN N", &count);
     printf("NO MATCH found.\n");
+  }
 
   exit(0);
 }
@@ -103,35 +108,39 @@ int get_strings_in_file(FILE *fp, char entries[MAX_ENTRY_SIZE][MAX_STRING_LENGTH
   return lines;
 }
 
+// Debug function
 void print_var(char testo[24], int *n)
 {
-        printf("%24s: %p - %i\n", testo, n, *n);
+        printf("[d]%24s: %p - %i\n", testo, n, *n);
 }
 
 // SplitSearch forking function
-void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target)
+void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target, int *count)
 {
   int fd[2];
-    
+
   if(pipe(fd) == -1)
   {
       perror("Pipe");
       exit(1);
   }
-    
+
+  int n = 0;
+
   if(start == end)
   {
     if(strcmp(target, array[start]) == 0)
     {
+      n++;
       printf("FOUND at line %02d.\n", start + 1);
     }
   }
   else
-  {     
+  {
     int mid = (start + end) / 2;
-    
+
     int pid_figlio = fork();
-    
+
     if(pid_figlio < 0)
     {
         perror("Unable to fork");
@@ -139,14 +148,19 @@ void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int e
     }
     else if(pid_figlio == 0)
     {
-      splitsearch(array, start, mid, target);
-      exit(0);
+      splitsearch(array, start, mid, target, &n);
+      write(fd[1], &n, 1);
     }
     else
     {
-      splitsearch(array, mid + 1, end, target);
+      splitsearch(array, mid + 1, end, target, &n);
+      read(fd[0], &n, 1);
       int status;
       waitpid(pid_figlio, &status, 0);
     }
   }
+
+  *count += n;
+
+  print_var("N", &n);
 }
