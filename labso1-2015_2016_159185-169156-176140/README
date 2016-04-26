@@ -15,3 +15,5 @@ Gilmozzi Andrea - Toniatti Carlo - Valentini Mattia
 5. confrontare il dato restante con l'input richiesto
 6. se sono uguali ritornare la posizione del dato all'interno del vettore,
 	 altrimenti ritorna 0
+
+COMMIT TEST
