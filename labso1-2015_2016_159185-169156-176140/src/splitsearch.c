@@ -59,9 +59,11 @@ int main(int argc, char *argv[])
   int pid = getpid();
   splitsearch(lines, 0, n_lines, target, &count);
 
+
+  print_var("MAIN N", &count);
+
   if(count < 1 && pid == getpid())
   {
-    print_var("MAIN N", &count);
     printf("NO MATCH found.\n");
   }
 
@@ -126,6 +128,7 @@ void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int e
   }
 
   int n = 0;
+  int z = 0;
 
   if(start == end)
   {
@@ -150,17 +153,16 @@ void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int e
     {
       splitsearch(array, start, mid, target, &n);
       write(fd[1], &n, 1);
+      exit(0);
     }
     else
     {
-      splitsearch(array, mid + 1, end, target, &n);
+      splitsearch(array, mid + 1, end, target, &z);
       read(fd[0], &n, 1);
       int status;
       waitpid(pid_figlio, &status, 0);
     }
   }
 
-  *count += n;
-
-  print_var("N", &n);
+  *count += n + z;
 }
