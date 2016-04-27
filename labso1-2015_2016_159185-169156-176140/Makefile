@@ -25,6 +25,3 @@ build : clean compile
 
 test : compile
 	build/$(PROJECTNAME) 4 assets/input03.txt
-
-testpipe:
-	$(CC) $(CFLAGS) src/pipe_test.c -o build/pipe_test && build/pipe_test
