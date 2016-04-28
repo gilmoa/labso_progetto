@@ -4,13 +4,13 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#define MAX_STRING_LENGTH 512
-#define MAX_ENTRY_SIZE 2048
+#define MSL 512
+#define MES 2048
 
-void print_array(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end);
+void print_array(char array[MES][MSL], int start, int end);
 void chomp(char *s);
-int get_strings_in_file(FILE *fp, char entries[MAX_ENTRY_SIZE][MAX_STRING_LENGTH]);
-void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target, int f[2], int c[2]);
+int get_strings_in_file(FILE *fp, char entries[MES][MSL]);
+void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2]);
 void pipe_add(int x, int c[2]);
 
 void print_var(char testo[24], int *n);
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
   }
 
   int n_lines;
-  char lines[MAX_ENTRY_SIZE][MAX_STRING_LENGTH];
+  char lines[MES][MSL];
 
   n_lines = get_strings_in_file(fp, lines);
 
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
 }
 
 // Print array size and indexed values
-void print_array(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end)
+void print_array(char array[MES][MSL], int start, int end)
 {
   int i;
   printf("SIZE = %02d.\n------\n", (end - start));
@@ -109,12 +109,12 @@ void chomp(char *s)
 }
 
 // Copy valid lines to array and return number of lines
-int get_strings_in_file(FILE *fp, char entries[MAX_ENTRY_SIZE][MAX_STRING_LENGTH])
+int get_strings_in_file(FILE *fp, char entries[MES][MSL])
 {
-  char line[MAX_STRING_LENGTH];
+  char line[MSL];
   int lines = 0;
 
-  while(fgets(line, sizeof(line), fp) && lines < MAX_ENTRY_SIZE)
+  while(fgets(line, sizeof(line), fp) && lines < MES)
   {
     chomp(line);
     if(strlen(line) > 0)
@@ -143,7 +143,7 @@ void pipe_add(int x, int c[2])
 }
 
 // SplitSearch forking function
-void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target, int f[2], int c[2])
+void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2])
 {
   int tmp;
   read(c[0], &tmp, 1);
