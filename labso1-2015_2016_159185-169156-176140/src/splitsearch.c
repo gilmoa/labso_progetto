@@ -64,20 +64,6 @@ int main(int argc, char *argv[])
   write(cp[1], &count, 1);
 
   splitsearch(lines, 0, n_lines, target, fd, cp);
-  int term = 0;
-  write(fd[1], &term, 1);
-
-  int results[256];
-
-  while(1)
-  {
-    int r;
-    read(fd[0], &r, 1);
-    if(r == 0)
-      break;
-
-    printf("%d\n", r);
-  }
 
   read(cp[0], &count, 1);
 
@@ -86,6 +72,16 @@ int main(int argc, char *argv[])
   if(count < 1 && pid == getpid())
   {
     printf("NO MATCH found.\n");
+    exit(0);
+  }
+
+  while(count > 0)
+  {
+    int r;
+    read(fd[0], &r, 1);
+
+    printf("%d\n", r);
+    count--;
   }
 
   exit(0);
@@ -143,18 +139,35 @@ void pipe_add(int x, int c[2])
   read(c[0], &tmp, 1);
   tmp += x;
   write(c[1], &tmp, 1);
+  print_var("TMP", &tmp);
 }
 
 // SplitSearch forking function
 void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target, int f[2], int c[2])
 {
+  int tmp;
+  read(c[0], &tmp, 1);
+
+  // print_var("TMP2", &tmp);
+  if(tmp >= 2)
+  {
+    write(c[1], &tmp, 1);
+    return;
+  }
+
+  write(c[1], &tmp, 1);
+
   if(start == end)
   {
     if(strcmp(target, array[start]) == 0)
     {
       int found = start + 1;
       write(f[1], &found, 1);
-      pipe_add(1, c);
+
+      int tmp;
+      read(c[0], &tmp, 1);
+      tmp += 1;
+      write(c[1], &tmp, 1);
 
       // printf("FOUND at line %02d.\n", found);
     }
