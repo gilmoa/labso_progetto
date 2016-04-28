@@ -25,3 +25,6 @@ build : clean compile
 
 test : compile
 	build/$(PROJECTNAME) 4 assets/input03.txt
+
+t :
+	$(CC) $(CFLAGS) src/test.c -o build/test && build/test

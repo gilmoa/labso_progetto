@@ -10,7 +10,7 @@
 void print_array(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end);
 void chomp(char *s);
 int get_strings_in_file(FILE *fp, char entries[MAX_ENTRY_SIZE][MAX_STRING_LENGTH]);
-void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target, int *count);
+void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target, int f[2]);
 
 void print_var(char testo[24], int *n);
 
@@ -38,9 +38,9 @@ int main(int argc, char *argv[])
 
   fclose(fp);
 
-  printf("TOTAL LINES: %02d.\n", n_lines);
-  printf("Searching for '%s' in: \n", target);
-  print_array(lines, 0, n_lines);
+  // printf("TOTAL LINES: %02d.\n", n_lines);
+  // printf("Searching for '%s' in: \n", target);
+  // print_array(lines, 0, n_lines);
 
   // for-loop search test
   // int i;
@@ -55,14 +55,32 @@ int main(int argc, char *argv[])
 
   // splitsearch
 
-  int count = 0;
   int pid = getpid();
-  splitsearch(lines, 0, n_lines, target, &count);
+  int fd[2];
 
+  if(pipe(fd) == -1)
+  {
+      perror("Pipe");
+      exit(1);
+  }
 
-  print_var("MAIN N", &count);
+  splitsearch(lines, 0, n_lines, target, fd);
+  int term = 0;
+  write(fd[1], &term, 1);
 
-  if(count < 1 && pid == getpid())
+  int results[256];
+
+  while(1)
+  {
+    int r;
+    read(fd[0], &r, 1);
+    if(r == 0)
+      break;
+
+    printf("%d\n", r);
+  }
+
+  if(pid == getpid())
   {
     printf("NO MATCH found.\n");
   }
@@ -117,25 +135,16 @@ void print_var(char testo[24], int *n)
 }
 
 // SplitSearch forking function
-void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target, int *count)
+void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int end, char *target, int f[2])
 {
-  int fd[2];
-
-  if(pipe(fd) == -1)
-  {
-      perror("Pipe");
-      exit(1);
-  }
-
-  int n = 0;
-  int z = 0;
-
   if(start == end)
   {
     if(strcmp(target, array[start]) == 0)
     {
-      n++;
-      printf("FOUND at line %02d.\n", start + 1);
+      int found = start + 1;
+      write(f[1], &found, 1);
+
+      // printf("FOUND at line %02d.\n", found);
     }
   }
   else
@@ -151,18 +160,14 @@ void splitsearch(char array[MAX_ENTRY_SIZE][MAX_STRING_LENGTH], int start, int e
     }
     else if(pid_figlio == 0)
     {
-      splitsearch(array, start, mid, target, &n);
-      write(fd[1], &n, 1);
+      splitsearch(array, start, mid, target, f);
       exit(0);
     }
     else
     {
-      splitsearch(array, mid + 1, end, target, &z);
-      read(fd[0], &n, 1);
+      splitsearch(array, mid + 1, end, target, f);
       int status;
       waitpid(pid_figlio, &status, 0);
     }
   }
-
-  *count += n + z;
 }
