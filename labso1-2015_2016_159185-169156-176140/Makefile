@@ -14,11 +14,10 @@ help :
 compile :
 	$(CC) $(CFLAGS) src/$(PROJECTNAME).c -o build/$(PROJECTNAME)
 
+.PHONY: clean
+
 clean :
-	@rm -f *~
-	@rm -f assets/*~
-	@rm -f src/*~
-	@rm -f build/*~
+	@rm -f *~ assets/*~ src/*~ build/*
 	@echo "Cleaning done."
 
 build : clean compile
