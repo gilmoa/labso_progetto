@@ -10,7 +10,7 @@
 void print_array(char array[MES][MSL], int start, int end);
 void chomp(char *s);
 int get_strings_in_file(FILE *fp, char entries[MES][MSL]);
-void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2]);
+void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2], int max);
 void pipe_add(int x, int c[2]);
 
 void print_var(char testo[24], int *n);
@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
 
   int n_lines;
   char lines[MES][MSL];
+	int max=900;
 
   n_lines = get_strings_in_file(fp, lines);
 
@@ -61,26 +62,25 @@ int main(int argc, char *argv[])
 
   int count = 0;
 
-  write(cp[1], &count, 1);
+  write(cp[1], &count, sizeof(count));
 
-  splitsearch(lines, 0, n_lines, target, fd, cp);
+  splitsearch(lines, 0, n_lines, target, fd, cp, max);
 
-  read(cp[0], &count, 1);
-
+  read(cp[0], &count, sizeof(count));
+	
   print_var("COUNT", &count);
 
-  if(count < 1 && pid == getpid())
+  if(count == 0 && pid == getpid())
   {
     printf("NO MATCH found.\n");
     exit(0);
   }
-
   while(count > 0)
   {
-    int r;
-    read(fd[0], &r, 1);
+    int r=0;
+    read(fd[0], &r, sizeof(r));
 
-    printf("%d\n", r);
+    printf("FOUND at line %02d.\n", r);
     count--;
   }
 
@@ -143,56 +143,63 @@ void pipe_add(int x, int c[2])
 }
 
 // SplitSearch forking function
-void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2])
+void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2], int max)
 {
-  int tmp;
-  read(c[0], &tmp, 1);
+  int tmp=0;
+  read(c[0], &tmp, sizeof(tmp));
+
+  
 
   // print_var("TMP2", &tmp);
-  if(tmp >= 2)
+  if(tmp >= max)
   {
-    write(c[1], &tmp, 1);
-    return;
-  }
-
-  write(c[1], &tmp, 1);
-
-  if(start == end)
-  {
-    if(strcmp(target, array[start]) == 0)
-    {
-      int found = start + 1;
-      write(f[1], &found, 1);
-
-      int tmp;
-      read(c[0], &tmp, 1);
-      tmp += 1;
-      write(c[1], &tmp, 1);
-
-      // printf("FOUND at line %02d.\n", found);
-    }
+	write(c[1], &tmp, sizeof(tmp));
   }
   else
   {
-    int mid = (start + end) / 2;
+    if(start == end)
+    {
+      if(strcmp(target, array[start]) == 0)
+      {
+        int found = start + 1;
+        write(f[1], &found, sizeof(found));
 
-    int pid_figlio = fork();
+		    //int tmp;
+		    //read(c[0], &tmp, 1);
+		    tmp += 1;
+		    write(c[1], &tmp, sizeof(tmp));
 
-    if(pid_figlio < 0)
-    {
-        perror("Unable to fork");
-        exit(1);
-    }
-    else if(pid_figlio == 0)
-    {
-      splitsearch(array, start, mid, target, f, c);
-      exit(0);
-    }
-    else
-    {
-      splitsearch(array, mid + 1, end, target, f, c);
-      int status;
-      waitpid(pid_figlio, &status, 0);
-    }
-  }
+		    //printf("FOUND at line %02d.\n", found);
+		  }
+			else
+			{
+			write(c[1], &tmp, sizeof(tmp));
+			}
+		}
+		else
+		{
+			write(c[1], &tmp, sizeof(tmp));			
+			
+		  int mid = (start + end) / 2;
+
+		  int pid_figlio = fork();
+
+		  if(pid_figlio < 0)
+		  {
+		      perror("Unable to fork");
+		      exit(1);
+		  }
+		  else if(pid_figlio == 0)
+		  {
+		    splitsearch(array, start, mid, target, f, c, max);
+		    exit(0);
+		  }
+		  else
+		  {
+		    splitsearch(array, mid + 1, end, target, f, c, max);
+		    int status;
+		    waitpid(pid_figlio, &status, 0);
+		  }
+		}
+	}
 }
