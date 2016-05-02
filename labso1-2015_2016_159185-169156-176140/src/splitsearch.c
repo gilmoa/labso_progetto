@@ -34,7 +34,6 @@ int main(int argc, char *argv[])
 
   int n_lines;
   char lines[MES][MSL];
-	int max=900;
 
   n_lines = get_strings_in_file(fp, lines);
 
@@ -59,6 +58,7 @@ int main(int argc, char *argv[])
       exit(1);
   }
 
+  int max = 10;
 
   int count = 0;
 
@@ -67,20 +67,21 @@ int main(int argc, char *argv[])
   splitsearch(lines, 0, n_lines, target, fd, cp, max);
 
   read(cp[0], &count, sizeof(count));
-	
+
   print_var("COUNT", &count);
 
   if(count == 0 && pid == getpid())
   {
-    printf("NO MATCH found.\n");
+    printf("0\n");
     exit(0);
   }
+
   while(count > 0)
   {
     int r=0;
     read(fd[0], &r, sizeof(r));
 
-    printf("FOUND at line %02d.\n", r);
+    printf("%d\n", r);
     count--;
   }
 
@@ -133,27 +134,15 @@ void print_var(char testo[24], int *n)
         printf("[d]%24s: %p - %i\n", testo, n, *n);
 }
 
-void pipe_add(int x, int c[2])
-{
-  int tmp;
-  read(c[0], &tmp, 1);
-  tmp += x;
-  write(c[1], &tmp, 1);
-  print_var("TMP", &tmp);
-}
-
 // SplitSearch forking function
 void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2], int max)
 {
-  int tmp=0;
+  int tmp = 0;
   read(c[0], &tmp, sizeof(tmp));
 
-  
-
-  // print_var("TMP2", &tmp);
   if(tmp >= max)
   {
-	write(c[1], &tmp, sizeof(tmp));
+	   write(c[1], &tmp, sizeof(tmp));
   }
   else
   {
@@ -164,22 +153,18 @@ void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2
         int found = start + 1;
         write(f[1], &found, sizeof(found));
 
-		    //int tmp;
-		    //read(c[0], &tmp, 1);
 		    tmp += 1;
 		    write(c[1], &tmp, sizeof(tmp));
-
-		    //printf("FOUND at line %02d.\n", found);
 		  }
 			else
 			{
-			write(c[1], &tmp, sizeof(tmp));
+			     write(c[1], &tmp, sizeof(tmp));
 			}
 		}
 		else
 		{
-			write(c[1], &tmp, sizeof(tmp));			
-			
+			write(c[1], &tmp, sizeof(tmp));
+
 		  int mid = (start + end) / 2;
 
 		  int pid_figlio = fork();
