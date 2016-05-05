@@ -23,7 +23,7 @@ clean :
 build : clean compile
 
 test : compile
-	build/$(PROJECTNAME) 4 assets/input03.txt
+	build/$(PROJECTNAME) -t 4 -i assets/input04.txt -m 10
 
 t :
 	$(CC) $(CFLAGS) src/test.c -o build/test && build/test
