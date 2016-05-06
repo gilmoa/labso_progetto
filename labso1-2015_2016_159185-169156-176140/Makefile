@@ -24,3 +24,6 @@ build : clean compile
 
 test : compile
 	build/$(PROJECTNAME) -t 4 -i assets/input04.txt -m 10
+
+testv : compile
+		build/$(PROJECTNAME) -t 4 -i assets/input03.txt -m 10 -v

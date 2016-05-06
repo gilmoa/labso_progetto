@@ -13,8 +13,6 @@ int get_strings_in_file(FILE *fp, char entries[MES][MSL]);
 void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2], int max, int n, FILE *soutput);
 void pipe_add(int x, int c[2]);
 
-void print_var(char testo[24], int *n);
-
 // Usage: splitsearch <string> <dictionary_file>
 
 int main(int argc, char *argv[])
@@ -72,14 +70,14 @@ int main(int argc, char *argv[])
 					}
       else
 					{
-						printf("usage: %s <-t stringa_di_ricerca> <-i input> [-o output]\n\t[-m risultati_max]\n", argv[0]);
+						printf("usage: \t%s <-t stringa_di_ricerca> <-i input> [-o output]\n\t[-m risultati_max] [-v]\n", argv[0]);
 						exit(1);
 					}
     }
 
 		if((input_fileF == 0) || (targetF == 0))
 			{
-				printf("usage: %s <-t stringa_di_ricerca> <-i input> [-o output]\n\t[-m risultati_max]\n", argv[0]);
+				printf("usage: \t%s <-t stringa_di_ricerca> <-i input> [-o output]\n\t[-m risultati_max] [-v]\n", argv[0]);
 				exit(1);
 			}
 
@@ -93,8 +91,6 @@ int main(int argc, char *argv[])
 
   int n_lines;
   char lines[MES][MSL];
-
-
 
   n_lines = get_strings_in_file(fp, lines);
 
@@ -123,14 +119,18 @@ int main(int argc, char *argv[])
 
 	int n = 0;
 
+	fprintf(soutput, "--------------------\n[PID] Ricerca: <inizio - fine>\n--------------------\n");
+
 	splitsearch(lines, 0, n_lines - 1, target, fd, cp, max, n, soutput);
 
   read(cp[0], &count, sizeof(count));
 
+	fprintf(soutput, "\n===");
+
 	if(count == max)
 		fprintf(soutput, "LIMITE RAGGIUNTO. ");
 
-	fprintf(soutput, "FINITO.\n");
+	fprintf(soutput, "FINITO===\n\n");
 
   if(count == 0)
   {
@@ -209,9 +209,13 @@ void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2
   }
   else
   {
+		int i;
+		for(i = 0; i < n; i++)
+			fprintf(soutput, "-");
+
 		if(start == end)
     {
-			fprintf(soutput, "[%02d] Controllo: <%i>.", n + 1, start + 1);
+			fprintf(soutput, "[%5d] Ricerca: <%i>.", getpid(), start + 1);
       if(strcmp(target, array[start]) == 0)
       {
         int found = start + 1;
@@ -219,17 +223,17 @@ void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2
 
 		    tmp += 1;
 		    write(c[1], &tmp, sizeof(tmp));
-				fprintf(soutput, " TROVATO.\n");
+				fprintf(soutput, "%10s.\n", " TROVATO");
 		  }
 			else
 			{
 					fprintf(soutput, "\n");
-			     write(c[1], &tmp, sizeof(tmp));
+			    write(c[1], &tmp, sizeof(tmp));
 			}
 		}
 		else
 		{
-			fprintf(soutput, "[%02d] Ricerca: <%i - %i>.\n", n + 1, start + 1, end + 1);
+			fprintf(soutput, "[%5d] Ricerca: <%i - %i>.\n", getpid(), start + 1, end + 1);
 			write(c[1], &tmp, sizeof(tmp));
 
 		  int mid = (start + end) / 2;
