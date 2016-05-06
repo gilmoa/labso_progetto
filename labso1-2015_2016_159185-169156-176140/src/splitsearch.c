@@ -43,8 +43,14 @@ int main(int argc, char *argv[])
 	int input_fileF = 0;
 
 	// Descrittore per l'output a file o a schermo
-	FILE *soutput_file = stdout;							// default a <stdout>
-	FILE *soutput = fopen("/dev/null", "w");	// default a </dev/null>
+	FILE *soutput_file = stdout;										// default a <stdout>
+	FILE *soutput;
+
+	if((soutput = fopen("/dev/null", "w")) == NULL)	// default a </dev/null>
+	{
+		perror("/dev/null");
+		exit(1);
+	}
 
 	// Verifica degli argomenti del programma
 	int i;
@@ -81,7 +87,7 @@ int main(int argc, char *argv[])
 		// [-v]
 		else if (strcmp(argv[i], "-v") == 0)
 		{
-			soutput = stdout;		// Stream di progresso su <stdout>
+			soutput = stdout;					// Stream di progresso su <stdout>
 		}
 		// Gestione argomenti errati. Stampa usage.
 		else
@@ -107,8 +113,8 @@ int main(int argc, char *argv[])
 	FILE *fp;								// descrittore file di input
 
 	// Inizzializzazione descrittori pipe
-	int rp[2];		// pipe per i risultati
-	int cp[2];		// pipe per il conteggio
+	int rp[2];							// pipe per i risultati
+	int cp[2];							// pipe per il conteggio
 
 	// Inizializzazione pipe dei risultati
 	if(pipe(rp) == -1)
@@ -159,7 +165,7 @@ int main(int argc, char *argv[])
 	fprintf(soutput, "FINITO===\n\n");
 
 	// Se non sono stati trovati risultati stampo 0
-	if(count == 0)
+	if(count < 1)
 	{
 		fprintf(soutput_file, "0\n");
 		exit(0);
