@@ -1,5 +1,4 @@
 CC = gcc
-CFLAGS = -Wall
 PROJECTNAME = splitsearch
 
 help :
@@ -12,7 +11,7 @@ help :
 
 
 compile :
-	$(CC) $(CFLAGS) src/$(PROJECTNAME).c -o build/$(PROJECTNAME)
+	$(CC) src/$(PROJECTNAME).c -o build/$(PROJECTNAME)
 
 .PHONY: clean
 
