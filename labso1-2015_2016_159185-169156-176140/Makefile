@@ -2,12 +2,12 @@ CC = gcc
 PROJECTNAME = splitsearch
 
 help :
-	@echo "*Avaiable make commands:"
-	@echo "help    - this page."
-	@echo "compile - compile source code to build/."
-	@echo "clean   - clean backup files."
-	@echo "build   - same as clean and compile."
-	@echo "test    - build and run test case."
+	@echo "* Comandi make disponibili:"
+	@echo "help    - questa pagine."
+	@echo "compile - compila l'eseguibile in build/."
+	@echo "clean   - rimuove eventuali file di backup ed eseguibili."
+	@echo "build   - come eseguire clean e compile."
+	@echo "test    - esegue build e esegue un caso di test."
 
 
 compile :
@@ -23,6 +23,3 @@ build : clean compile
 
 test : compile
 	build/$(PROJECTNAME) -t 4 -i assets/input04.txt -m 10
-
-testv : compile
-		build/$(PROJECTNAME) -t 4 -i assets/input03.txt -m 10 -v
