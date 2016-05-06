@@ -5,7 +5,7 @@
 #include <sys/wait.h>
 
 #define MSL 512
-#define MES 2048
+#define MES 8192
 
 void print_array(char array[MES][MSL], int start, int end);
 void chomp(char *s);
@@ -59,18 +59,18 @@ int main(int argc, char *argv[])
 					}
       else
 					{
-						printf("usage: %s <-t stringa_di_ricerca> <-i input> [-o output]\n\t[-m risultati_max]\n", argv[0]);	
+						printf("usage: %s <-t stringa_di_ricerca> <-i input> [-o output]\n\t[-m risultati_max]\n", argv[0]);
 						exit(1);
 					}
     }
 
 		if((input_fileF == 0) || (targetF == 0))
 			{
-				printf("usage: %s <-t stringa_di_ricerca> <-i input> [-o output]\n\t[-m risultati_max]\n", argv[0]);	
+				printf("usage: %s <-t stringa_di_ricerca> <-i input> [-o output]\n\t[-m risultati_max]\n", argv[0]);
 				exit(1);
 			}
 
-  
+
 
   // parse file for values
   FILE *fp;
@@ -111,10 +111,10 @@ int main(int argc, char *argv[])
   int count = 0;
 
   write(cp[1], &count, sizeof(count));
-	
+
 	int n = 0;
-  
-	splitsearch(lines, 0, n_lines, target, fd, cp, max, n);
+
+	splitsearch(lines, 0, n_lines - 1, target, fd, cp, max, n);
 
   read(cp[0], &count, sizeof(count));
 
@@ -167,11 +167,12 @@ int get_strings_in_file(FILE *fp, char entries[MES][MSL])
 
   while(fgets(line, sizeof(line), fp) && lines < MES)
   {
+		line[MSL - 1] = '\0';
     chomp(line);
     if(strlen(line) > 0)
     {
       strcpy(entries[lines], line);
-      lines++;
+			lines++;
     }
   }
 
@@ -187,7 +188,7 @@ void print_var(char testo[24], int *n)
 // SplitSearch forking function
 void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2], int max, int n)
 {
-	printf("[%02d] Ricerca: <%i - %i>.\n", n + 1, start, end);
+	printf("[%02d] Ricerca: <%i - %i>.\n", n + 1, start + 1, end + 1);
   int tmp = 0;
   read(c[0], &tmp, sizeof(tmp));
 
@@ -206,7 +207,7 @@ void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2
 
 		    tmp += 1;
 		    write(c[1], &tmp, sizeof(tmp));
-				printf("[%02d] Ricerca: <%s> - riga %i.\n", n + 1, target, end);
+				printf("[%02d] Ricerca: <%s> - riga %i.\n", n + 1, target, end + 1);
 		  }
 			else
 			{
