@@ -264,19 +264,22 @@ void splitsearch(char array[MES][MSL], int start, int end, char *target, int r[2
 			// Calcolo punto medio del gruppo di analisi
 			int mid = (start + end) / 2;
 
-			// Fork del processo e memorizzazione del pid
+			// Fork del processo
 			int pid_figlio = fork();
 
+			// Se il fork fallisce
 			if(pid_figlio < 0)
 			{
 				perror("Unable to fork");
 				exit(1);
 			}
+			// Se il nuovo processo e' figlio
 			else if(pid_figlio == 0)
 			{
 				splitsearch(array, start, mid, target, r, c, max, n, soutput);
 				exit(0);
 			}
+			// Se il processo e' lo stesso
 			else
 			{
 				splitsearch(array, mid + 1, end, target, r, c, max, n, soutput);
