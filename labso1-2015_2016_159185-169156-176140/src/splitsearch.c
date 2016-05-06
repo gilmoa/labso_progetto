@@ -10,7 +10,7 @@
 void print_array(char array[MES][MSL], int start, int end);
 void chomp(char *s);
 int get_strings_in_file(FILE *fp, char entries[MES][MSL]);
-void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2], int max, int n);
+void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2], int max, int n, FILE *soutput);
 void pipe_add(int x, int c[2]);
 
 void print_var(char testo[24], int *n);
@@ -28,10 +28,15 @@ int main(int argc, char *argv[])
 	int input_fileF = 0;
 
 	char *output_file;
-	int output_fileF = 0;
 
 	int max = MES;
 	int i;
+
+	FILE *soutput_file;
+	soutput_file = stdout;
+
+	FILE *soutput;
+	soutput = fopen("/dev/null", "w");
 
 	for (i = 1; i < argc; i++) {
 			if (strcmp(argv[i], "-i") == 0)
@@ -54,8 +59,16 @@ int main(int argc, char *argv[])
 			else if (strcmp(argv[i], "-o") == 0)
           {
 						i++;
-						output_fileF = 1;
           	output_file = argv[i];
+						if((soutput_file = fopen(output_file, "w")) == NULL)
+					  {
+					    perror(output_file);
+					    exit(1);
+					  }
+					}
+			else if (strcmp(argv[i], "-v") == 0)
+		      {
+						soutput = stdout;
 					}
       else
 					{
@@ -69,8 +82,6 @@ int main(int argc, char *argv[])
 				printf("usage: %s <-t stringa_di_ricerca> <-i input> [-o output]\n\t[-m risultati_max]\n", argv[0]);
 				exit(1);
 			}
-
-
 
   // parse file for values
   FILE *fp;
@@ -90,8 +101,6 @@ int main(int argc, char *argv[])
   fclose(fp);
 
   // splitsearch
-
-  int pid = getpid();
 
   int fd[2];
   int cp[2];
@@ -114,24 +123,27 @@ int main(int argc, char *argv[])
 
 	int n = 0;
 
-	splitsearch(lines, 0, n_lines - 1, target, fd, cp, max, n);
+	splitsearch(lines, 0, n_lines - 1, target, fd, cp, max, n, soutput);
 
   read(cp[0], &count, sizeof(count));
 
-  print_var("COUNT", &count);
+	if(count == max)
+		fprintf(soutput, "LIMITE RAGGIUNTO. ");
 
-  if(count == 0 && pid == getpid())
+	fprintf(soutput, "FINITO.\n");
+
+  if(count == 0)
   {
-    printf("0\n");
+    fprintf(soutput_file, "0\n");
     exit(0);
   }
 
   while(count > 0)
   {
-    int r=0;
+    int r = 0;
     read(fd[0], &r, sizeof(r));
 
-    printf("%d\n", r);
+    fprintf(soutput_file, "%d\n", r);
     count--;
   }
 
@@ -186,9 +198,8 @@ void print_var(char testo[24], int *n)
 }
 
 // SplitSearch forking function
-void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2], int max, int n)
+void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2], int max, int n, FILE *soutput)
 {
-	printf("[%02d] Ricerca: <%i - %i>.\n", n + 1, start + 1, end + 1);
   int tmp = 0;
   read(c[0], &tmp, sizeof(tmp));
 
@@ -198,8 +209,9 @@ void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2
   }
   else
   {
-    if(start == end)
+		if(start == end)
     {
+			fprintf(soutput, "[%02d] Controllo: <%i>.", n + 1, start + 1);
       if(strcmp(target, array[start]) == 0)
       {
         int found = start + 1;
@@ -207,18 +219,21 @@ void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2
 
 		    tmp += 1;
 		    write(c[1], &tmp, sizeof(tmp));
-				printf("[%02d] Ricerca: <%s> - riga %i.\n", n + 1, target, end + 1);
+				fprintf(soutput, " TROVATO.\n");
 		  }
 			else
 			{
+					fprintf(soutput, "\n");
 			     write(c[1], &tmp, sizeof(tmp));
 			}
 		}
 		else
 		{
+			fprintf(soutput, "[%02d] Ricerca: <%i - %i>.\n", n + 1, start + 1, end + 1);
 			write(c[1], &tmp, sizeof(tmp));
 
 		  int mid = (start + end) / 2;
+
 
 			n++;
 
@@ -231,12 +246,12 @@ void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2
 		  }
 		  else if(pid_figlio == 0)
 		  {
-		    splitsearch(array, start, mid, target, f, c, max, n);
+		    splitsearch(array, start, mid, target, f, c, max, n, soutput);
 		    exit(0);
 		  }
 		  else
 		  {
-		    splitsearch(array, mid + 1, end, target, f, c, max, n);
+		    splitsearch(array, mid + 1, end, target, f, c, max, n, soutput);
 		    int status;
 		    waitpid(pid_figlio, &status, 0);
 		  }

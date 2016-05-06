@@ -25,5 +25,5 @@ build : clean compile
 test : compile
 	build/$(PROJECTNAME) -t 4 -i assets/input04.txt -m 10
 
-t :
-	$(CC) $(CFLAGS) src/test.c -o build/test && build/test
+test2 : compile
+	build/$(PROJECTNAME) -t 4 -i assets/input03.txt -m 3 -o assets/output03-4.txt
