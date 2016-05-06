@@ -4,261 +4,285 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#define MSL 512
-#define MES 8192
+#define MSL 512		// Lunghezza massima righe in lettura.
+#define MES 8192  // Numero massimo di righe leggibili dal file.
 
-void print_array(char array[MES][MSL], int start, int end);
+// Rimuove un eventuale carattere newline dalla stringa e si assicura sia
+// '\0' terminata.
 void chomp(char *s);
+
+// Copia le righe da fp in entries e ritorna il numero di righe lette.
 int get_strings_in_file(FILE *fp, char entries[MES][MSL]);
-void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2], int max, int n, FILE *soutput);
-void pipe_add(int x, int c[2]);
 
-// Usage: splitsearch <string> <dictionary_file>
+// Effettua una ricerca ricorsiva di target in array dalla posizione start
+// alla posizione end.
+// Se un risultato viene trovato la sua posizione in array viene aggiunta
+// alla pipe r e viene incrementato il valore nella pipe c.
+// Termina se il contenuto della pipe c e' maggiore o uguale a max.
+//
+// n e' indice della profondita' della ricorsione.
+// soutput indica dove stampare una rappresentazione del progresso delle azioni.
+void splitsearch(char array[MES][MSL], int start, int end, char *target, int r[2], int c[2], int max, int n, FILE *soutput);
 
+// entry point del programma
 int main(int argc, char *argv[])
 {
-  // todo: check arguments
+	//
+	// Controllo degli argomenti al programma
+	//
 
-	char *target;
+	// Inizializzazione delle variabili per il controllo degli argomenti
+	char *target;						// obbiettivo di ricerca
+	char *input_file;				// file di input
+	char *output_file;			// file di output
+
+	int max = MES;					// numero massimo di risultati
+
+	// FLAGs per argomenti obbligatori
 	int targetF = 0;
-
-  char *input_file;
 	int input_fileF = 0;
 
-	char *output_file;
+	// Descrittore per l'output a file o a schermo
+	FILE *soutput_file = stdout;							// default a <stdout>
+	FILE *soutput = fopen("/dev/null", "w");	// default a </dev/null>
 
-	int max = MES;
+	// Verifica degli argomenti del programma
 	int i;
-
-	FILE *soutput_file;
-	soutput_file = stdout;
-
-	FILE *soutput;
-	soutput = fopen("/dev/null", "w");
-
 	for (i = 1; i < argc; i++) {
-			if (strcmp(argv[i], "-i") == 0)
-					{
-						i++;
-						input_fileF = 1;
-            input_file = argv[i];
-					}
-      else if (strcmp(argv[i], "-t") == 0)
-          {
-						i++;
-						targetF = 1;
-          	target = argv[i];
-					}
-			else if (strcmp(argv[i], "-m") == 0)
-          {
-						i++;
-          	max = atoi(argv[i]);
-					}
-			else if (strcmp(argv[i], "-o") == 0)
-          {
-						i++;
-          	output_file = argv[i];
-						if((soutput_file = fopen(output_file, "w")) == NULL)
-					  {
-					    perror(output_file);
-					    exit(1);
-					  }
-					}
-			else if (strcmp(argv[i], "-v") == 0)
-		      {
-						soutput = stdout;
-					}
-      else
-					{
-						printf("usage: \t%s <-t stringa_di_ricerca> <-i input> [-o output]\n\t[-m risultati_max] [-v]\n", argv[0]);
-						exit(1);
-					}
-    }
+		// <-i input file>
+		if (strcmp(argv[i], "-i") == 0)
+		{
+			input_fileF = 1;					// Argomento necessario presente
+			input_file = argv[++i];   // Assegnamento percorso file di input
+		}
+		// <-t target>
+		else if (strcmp(argv[i], "-t") == 0)
+		{
+			targetF = 1;							// Argomento necessario presente
+			target = argv[++i];				// Assegnamento obbiettivo di ricerca
+		}
+		// [-m risultati_max]
+		else if (strcmp(argv[i], "-m") == 0)
+		{
+			max = atoi(argv[++i]);		// Assegnamento valore massimo opzionale
+		}
+		// [-o output_file]
+		else if (strcmp(argv[i], "-o") == 0)
+		{
+			output_file = argv[++i];	// Assegnamento percorso file di output opzionale
 
-		if((input_fileF == 0) || (targetF == 0))
+			// Stream di output sul file non a schermo
+			if((soutput_file = fopen(output_file, "w")) == NULL)
 			{
-				printf("usage: \t%s <-t stringa_di_ricerca> <-i input> [-o output]\n\t[-m risultati_max] [-v]\n", argv[0]);
+				perror(output_file);
 				exit(1);
 			}
+		}
+		// [-v]
+		else if (strcmp(argv[i], "-v") == 0)
+		{
+			soutput = stdout;		// Stream di progresso su <stdout>
+		}
+		// Gestione argomenti errati. Stampa usage.
+		else
+		{
+			printf("usage: \t%s <-t stringa_di_ricerca> <-i input_file> [-o output_file]\n\t[-m risultati_max] [-v]\n", argv[0]);
+			exit(1);
+		}
+	}
 
-  // parse file for values
-  FILE *fp;
-  if((fp = fopen(input_file, "r")) == NULL)
-  {
-    perror(input_file);
-    exit(1);
-  }
+	// Gestione mancanza argomenti obbligatori. Stampa usage.
+	if((input_fileF == 0) || (targetF == 0))
+	{
+		printf("usage: \t%s <-t stringa_di_ricerca> <-i input_file> [-o output_file]\n\t[-m risultati_max] [-v]\n", argv[0]);
+		exit(1);
+	}
 
-  int n_lines;
-  char lines[MES][MSL];
+	//
+	// Inizio programma vero e proprio
+	//
 
-  n_lines = get_strings_in_file(fp, lines);
+	// Inizializzazione variabili
+	char lines[MES][MSL];		// array per le stringhe lette dal file
+	FILE *fp;								// descrittore file di input
 
-  fclose(fp);
+	// Inizzializzazione descrittori pipe
+	int rp[2];		// pipe per i risultati
+	int cp[2];		// pipe per il conteggio
 
-  // splitsearch
+	// Inizializzazione pipe dei risultati
+	if(pipe(rp) == -1)
+	{
+		perror("Pipe");
+		exit(1);
+	}
 
-  int fd[2];
-  int cp[2];
+	// Inizializzazione pipe del conteggio
+	if(pipe(cp) == -1)
+	{
+		perror("Pipe");
+		exit(1);
+	}
 
-  if(pipe(fd) == -1)
-  {
-      perror("Pipe");
-      exit(1);
-  }
+	// Apertura file di input
+	if((fp = fopen(input_file, "r")) == NULL)
+	{
+		perror(input_file);
+		exit(1);
+	}
 
-  if(pipe(cp) == -1)
-  {
-      perror("Pipe");
-      exit(1);
-  }
+	// Lettura file di input nell'array lines
+	int n_lines = get_strings_in_file(fp, lines);
+	fclose(fp);		// Chiusura file di input
 
-  int count = 0;
+	// Scrittura in pipe del count iniziale
+	int count = 0;
+	write(cp[1], &count, sizeof(count));
 
-  write(cp[1], &count, sizeof(count));
-
-	int n = 0;
-
+	// Definizione formato della modalita' descrittiva
 	fprintf(soutput, "--------------------\n[PID] Ricerca: <inizio - fine>\n--------------------\n");
+	int n = 0;		// primo livello di profondita'
 
-	splitsearch(lines, 0, n_lines - 1, target, fd, cp, max, n, soutput);
+	// Inizio ricerca ricorsiva
+	splitsearch(lines, 0, n_lines - 1, target, rp, cp, max, n, soutput);
 
-  read(cp[0], &count, sizeof(count));
+	// Aggiornamento numero di risultati dopo la ricerca
+	read(cp[0], &count, sizeof(count));
 
+	// Solo per modalita' descrittiva (MD)
+	// Stampa fine del processo
 	fprintf(soutput, "\n===");
 
-	if(count == max)
-		fprintf(soutput, "LIMITE RAGGIUNTO. ");
+	if(count >= max)													 	// se e' stato raggiunto il limite
+		fprintf(soutput, "LIMITE RAGGIUNTO. ");  	// imposto si notifica
 
 	fprintf(soutput, "FINITO===\n\n");
 
-  if(count == 0)
-  {
-    fprintf(soutput_file, "0\n");
-    exit(0);
-  }
+	// Se non sono stati trovati risultati stampo 0
+	if(count == 0)
+	{
+		fprintf(soutput_file, "0\n");
+		exit(0);
+	}
 
-  while(count > 0)
-  {
-    int r = 0;
-    read(fd[0], &r, sizeof(r));
+	// Altrimenti leggo e scrivo ogni riga trovata nella pipe dei risultati
+	while(count > 0)
+	{
+		int n_line = 0;
+		read(rp[0], &n_line, sizeof(n_line));
 
-    fprintf(soutput_file, "%d\n", r);
-    count--;
-  }
+		fprintf(soutput_file, "%d\n", n_line);
+		count--;
+	}
 
-  exit(0);
+	exit(0);
 }
 
-// Print array size and indexed values
-void print_array(char array[MES][MSL], int start, int end)
-{
-  int i;
-  printf("SIZE = %02d.\n------\n", (end - start));
-  for(i = start; i < end; i++)
-  {
-    printf("(%02d) - [%s]\n", i + 1, array[i]);
-  }
-  printf("------\n");
-}
-
-// Switch trailing newline char to endofstring
 void chomp(char *s)
 {
-  while(*s != '\n')
-    s++;
+	// Il puntatore alla stringa si muove alla fine
+	while(*s != '\n' && *s != '\0')
+		s++;
 
-  *s = '\0';
+	// '\0' termine stringa
+	*s = '\0';
 }
 
-// Copy valid lines to array and return number of lines
 int get_strings_in_file(FILE *fp, char entries[MES][MSL])
 {
-  char line[MSL];
-  int lines = 0;
+	char line[MSL];
+	int lines = 0;
 
-  while(fgets(line, sizeof(line), fp) && lines < MES)
-  {
-		line[MSL - 1] = '\0';
-    chomp(line);
-    if(strlen(line) > 0)
-    {
-      strcpy(entries[lines], line);
+	// Lettura file riga per riga
+	while(fgets(line, sizeof(line), fp) && lines < MES)
+	{
+		chomp(line);
+
+		// Se la riga non e' vuota viene copiata in entries
+		if(strlen(line) > 0)
+		{
+			strcpy(entries[lines], line);
 			lines++;
-    }
-  }
+		}
+	}
 
-  return lines;
+	return lines;
 }
 
-// Debug function
-void print_var(char testo[24], int *n)
+void splitsearch(char array[MES][MSL], int start, int end, char *target, int r[2], int c[2], int max, int n, FILE *soutput)
 {
-        printf("[d]%24s: %p - %i\n", testo, n, *n);
-}
+	// Lettura conteggio dei risultati
+	int c_count = 0;
+	read(c[0], &c_count, sizeof(c_count));
 
-// SplitSearch forking function
-void splitsearch(char array[MES][MSL], int start, int end, char *target, int f[2], int c[2], int max, int n, FILE *soutput)
-{
-  int tmp = 0;
-  read(c[0], &tmp, sizeof(tmp));
-
-  if(tmp >= max)
-  {
-	   write(c[1], &tmp, sizeof(tmp));
-  }
-  else
-  {
+	// Se e' stato raggiunto il limite di risultati
+	// non faccio altro
+	if(c_count >= max)
+	{
+		write(c[1], &c_count, sizeof(c_count));
+	}
+	else
+	{
+		// Solo per modalita' descrittiva (MD)
+		// Indentazione di profondita' del processo
 		int i;
 		for(i = 0; i < n; i++)
-			fprintf(soutput, "-");
+		fprintf(soutput, "-");
 
+		// Se va verificato un solo elemento
 		if(start == end)
-    {
-			fprintf(soutput, "[%5d] Ricerca: <%i>.", getpid(), start + 1);
-      if(strcmp(target, array[start]) == 0)
-      {
-        int found = start + 1;
-        write(f[1], &found, sizeof(found));
+		{
+			fprintf(soutput, "[%5d] Ricerca: <%i>.", getpid(), start + 1);	// (MD)
 
-		    tmp += 1;
-		    write(c[1], &tmp, sizeof(tmp));
-				fprintf(soutput, "%10s.\n", " TROVATO");
-		  }
+			// Se l'elemento corrisponde all' obbiettivo
+			if(strcmp(target, array[start]) == 0)
+			{
+				// Inserimento del numero di riga alla pipe dei risultati
+				int found = start + 1;
+				write(r[1], &found, sizeof(found));
+
+				// Aggiornamento del contatore nella pipe del conteggio
+				c_count += 1;
+				write(c[1], &c_count, sizeof(c_count));
+				fprintf(soutput, "%10s.\n", " TROVATO");			// (MD)
+			}
 			else
 			{
-					fprintf(soutput, "\n");
-			    write(c[1], &tmp, sizeof(tmp));
+				fprintf(soutput, "\n");				// (MD)
+				write(c[1], &c_count, sizeof(c_count));
 			}
 		}
 		else
 		{
-			fprintf(soutput, "[%5d] Ricerca: <%i - %i>.\n", getpid(), start + 1, end + 1);
-			write(c[1], &tmp, sizeof(tmp));
-
-		  int mid = (start + end) / 2;
-
-
+			// Aumento indice di profondita'
 			n++;
 
-		  int pid_figlio = fork();
+			fprintf(soutput, "[%5d] Ricerca: <%i - %i>.\n", getpid(), start + 1,
+			end + 1);									// (MD)
+			write(c[1], &c_count, sizeof(c_count));
 
-		  if(pid_figlio < 0)
-		  {
-		      perror("Unable to fork");
-		      exit(1);
-		  }
-		  else if(pid_figlio == 0)
-		  {
-		    splitsearch(array, start, mid, target, f, c, max, n, soutput);
-		    exit(0);
-		  }
-		  else
-		  {
-		    splitsearch(array, mid + 1, end, target, f, c, max, n, soutput);
-		    int status;
-		    waitpid(pid_figlio, &status, 0);
-		  }
+			// Calcolo punto medio del gruppo di analisi
+			int mid = (start + end) / 2;
+
+			// Fork del processo e memorizzazione del pid
+			int pid_figlio = fork();
+
+			if(pid_figlio < 0)
+			{
+				perror("Unable to fork");
+				exit(1);
+			}
+			else if(pid_figlio == 0)
+			{
+				splitsearch(array, start, mid, target, r, c, max, n, soutput);
+				exit(0);
+			}
+			else
+			{
+				splitsearch(array, mid + 1, end, target, r, c, max, n, soutput);
+				int status;
+				waitpid(pid_figlio, &status, 0);
+			}
 		}
 	}
 }
