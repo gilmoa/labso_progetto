@@ -11,7 +11,7 @@
 Descrizione
 ===========
 Il programma ricerca un elemento all'interno di un file e restituisce le righe
-dove è stato trovato.
+dove e' stato trovato.
 Se non risulta nessuna corrispondenza restituisce 0.
 
 Utilizzo
@@ -36,8 +36,8 @@ Opzionali
 Note
 ===========
 Il programma utilizza delle pipe per la comunicazione tra processi e quindi ha
-dei limiti dovuti alla grandezza che può variare a seconda della versione del
-kernel.
+dei limiti dovuti alla sua grandezza che può variare a seconda della versione
+del kernel.
 
 
 Migliorie
