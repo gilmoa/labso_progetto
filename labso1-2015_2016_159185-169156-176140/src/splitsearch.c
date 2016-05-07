@@ -270,7 +270,7 @@ void splitsearch(char **array, int start, int end, char *target, int r[2], int c
             // Se l'elemento corrisponde all' obbiettivo
             if(strcmp(target, array[start]) == 0)
             {
-                // Inserimento del numero di riga alla pipe dei risultati
+                // Inserimento del numero di riga nella pipe dei risultati
                 int found = start + 1;
                 write(r[WRITE], &found, sizeof(found));
 
@@ -300,11 +300,59 @@ void splitsearch(char **array, int start, int end, char *target, int r[2], int c
             // Fork del processo
             int pid_figlio = fork();
 
+            // Test del fallimento del fork()
+            // int pid_figlio;
+            // if(n < 2)
+                // pid_figlio = fork();
+            // else
+                // pid_figlio = -1;
+
             // Se il fork fallisce
             if(pid_figlio < 0)
             {
-                perror("Unable to fork");
-                exit(EXIT_FAILURE);
+                // Passo a una ricerca iterativa
+                fprintf(soutput, "[%5d]*** Fork fallito, continuo con la ricerca iterativa ***\n", getpid());
+                int j;
+                for(j = start; j <= end; j++)
+                {
+                    // Lettura conteggio dei risultati
+                    read(c[READ], &c_count, sizeof(c_count));
+                    // Se e' stato raggiunto il limite dei risultati
+                    // termino il ciclo di ricerca
+                    if(c_count >= max)
+                    {
+                        write(c[WRITE], &c_count, sizeof(c_count));
+                        j = end;
+                    }
+                    else
+                    {
+                        // Solo per modalita' descrittiva (MD)
+                        // Indentazione di profondita' del processo
+                        int i;
+                        for(i = 0; i < n; i++)
+                        fprintf(soutput, "-");
+
+                        fprintf(soutput, "[%5d] Ricerca: <%i>.", getpid(),
+                        j + 1);                     // (MD)
+                        // Se l'elemento corrisponde all'obbiettivo
+                        if(strcmp(target, array[j]) == 0)
+                        {
+                            // Inserimento del numero di riga nella pipe dei risultati
+                            int found = j + 1;
+                            write(r[WRITE], &found, sizeof(found));
+
+                            // Aggiornamento del contatore nella pipe del conteggio
+                            c_count += 1;
+                            write(c[WRITE], &c_count, sizeof(c_count));
+                            fprintf(soutput, "%10s.\n", " TROVATO");    // (MD)
+                        }
+                        else
+                        {
+                            fprintf(soutput, "\n");                     // (MD)
+                            write(c[WRITE], &c_count, sizeof(c_count));
+                        }
+                    }
+                }
             }
             // Se il nuovo processo e' figlio
             else if(pid_figlio == 0)
