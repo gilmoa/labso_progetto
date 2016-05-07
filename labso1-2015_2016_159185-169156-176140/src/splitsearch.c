@@ -26,7 +26,8 @@ char **get_strings_from_file(FILE *fp, int *length);
 //
 // n e' indice della profondita' della ricorsione.
 // soutput indica dove stampare una rappresentazione del progresso delle azioni.
-void splitsearch(char **array, int start, int end, char *target, int r[2], int c[2], int max, int n, FILE *soutput);
+void splitsearch(char **array, int start, int end, char *target, int r[2],
+                 int c[2], int max, int n, FILE *soutput);
 
 // entry point del programma
 int main(int argc, char *argv[])
@@ -242,7 +243,8 @@ char **get_strings_from_file(FILE *fp, int *length)
     return array;
 }
 
-void splitsearch(char **array, int start, int end, char *target, int r[2], int c[2], int max, int n, FILE *soutput)
+void splitsearch(char **array, int start, int end, char *target, int r[2],
+                 int c[2], int max, int n, FILE *soutput)
 {
     // Lettura conteggio dei risultati
     int c_count = 0;
@@ -265,7 +267,8 @@ void splitsearch(char **array, int start, int end, char *target, int r[2], int c
         // Se va verificato un solo elemento
         if(start == end)
         {
-            fprintf(soutput, "[%5d] Ricerca: <%i>.", getpid(), start + 1);    // (MD)
+            fprintf(soutput, "[%5d] Ricerca: <%i>.", getpid(),
+                    start + 1);                                     // (MD)
 
             // Se l'elemento corrisponde all' obbiettivo
             if(strcmp(target, array[start]) == 0)
@@ -281,7 +284,7 @@ void splitsearch(char **array, int start, int end, char *target, int r[2], int c
             }
             else
             {
-                fprintf(soutput, "\n");                // (MD)
+                fprintf(soutput, "\n");                             // (MD)
                 write(c[WRITE], &c_count, sizeof(c_count));
             }
         }
@@ -290,8 +293,8 @@ void splitsearch(char **array, int start, int end, char *target, int r[2], int c
             // Aumento indice di profondita'
             n++;
 
-            fprintf(soutput, "[%5d] Ricerca: <%i - %i>.\n", getpid(), start + 1,
-            end + 1);                                    // (MD)
+            fprintf(soutput, "[%5d] Ricerca: <%i - %i>.\n", getpid(),
+                    start + 1, end + 1);                            // (MD)
             write(c[WRITE], &c_count, sizeof(c_count));
 
             // Calcolo punto medio del gruppo di analisi
@@ -311,7 +314,9 @@ void splitsearch(char **array, int start, int end, char *target, int r[2], int c
             if(pid_figlio < 0)
             {
                 // Passo a una ricerca iterativa
-                fprintf(soutput, "[%5d]*** Fork fallito, continuo con la ricerca iterativa ***\n", getpid());
+                fprintf(soutput, "[%5d]*** Fork fallito, continuo con la ricerca iterativa ***\n",
+                        getpid());
+
                 int j;
                 for(j = start; j <= end; j++)
                 {
@@ -333,15 +338,17 @@ void splitsearch(char **array, int start, int end, char *target, int r[2], int c
                         fprintf(soutput, "-");
 
                         fprintf(soutput, "[%5d] Ricerca: <%i>.", getpid(),
-                        j + 1);                     // (MD)
+                                j + 1);                     // (MD)
                         // Se l'elemento corrisponde all'obbiettivo
                         if(strcmp(target, array[j]) == 0)
                         {
-                            // Inserimento del numero di riga nella pipe dei risultati
+                            // Inserimento del numero di riga nella pipe
+                            // dei risultati
                             int found = j + 1;
                             write(r[WRITE], &found, sizeof(found));
 
-                            // Aggiornamento del contatore nella pipe del conteggio
+                            // Aggiornamento del contatore nella pipe
+                            // del conteggio
                             c_count += 1;
                             write(c[WRITE], &c_count, sizeof(c_count));
                             fprintf(soutput, "%10s.\n", " TROVATO");    // (MD)
