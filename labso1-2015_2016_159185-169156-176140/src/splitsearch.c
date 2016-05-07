@@ -11,8 +11,9 @@
 // '\0' terminata.
 void chomp(char *s);
 
-// Copia le righe da fp in entries e ritorna il numero di righe lette.
-int get_strings_in_file(FILE *fp, char entries[MES][MSL]);
+// Ritorna un array contenente le linee del file fp e imposta length al numero
+// di righe
+char **get_strings_from_file(FILE *fp, int *length);
 
 // Effettua una ricerca ricorsiva di target in array dalla posizione start
 // alla posizione end.
@@ -22,7 +23,7 @@ int get_strings_in_file(FILE *fp, char entries[MES][MSL]);
 //
 // n e' indice della profondita' della ricorsione.
 // soutput indica dove stampare una rappresentazione del progresso delle azioni.
-void splitsearch(char array[MES][MSL], int start, int end, char *target, int r[2], int c[2], int max, int n, FILE *soutput);
+void splitsearch(char **array, int start, int end, char *target, int r[2], int c[2], int max, int n, FILE *soutput);
 
 // entry point del programma
 int main(int argc, char *argv[])
@@ -109,7 +110,7 @@ int main(int argc, char *argv[])
 	//
 
 	// Inizializzazione variabili
-	char lines[MES][MSL];		// array per le stringhe lette dal file
+	char **lines;						// array per le stringhe lette dal file
 	FILE *fp;								// descrittore file di input
 
 	// Inizzializzazione descrittori pipe
@@ -138,7 +139,8 @@ int main(int argc, char *argv[])
 	}
 
 	// Lettura file di input nell'array lines
-	int n_lines = get_strings_in_file(fp, lines);
+	int n_lines;
+	lines = get_strings_from_file(fp, &n_lines);
 	fclose(fp);		// Chiusura file di input
 
 	// Scrittura in pipe del count iniziale
@@ -194,28 +196,53 @@ void chomp(char *s)
 	*s = '\0';
 }
 
-int get_strings_in_file(FILE *fp, char entries[MES][MSL])
+char **get_strings_from_file(FILE *fp, int *length)
 {
-	char line[MSL];
-	int lines = 0;
+  static char **array;
 
-	// Lettura file riga per riga
-	while(fgets(line, sizeof(line), fp) && lines < MES)
-	{
-		chomp(line);
+  int c_line = 0;
+  int line_step = 2;
+  int line_expansion = 0;
 
-		// Se la riga non e' vuota viene copiata in entries
-		if(strlen(line) > 0)
-		{
-			strcpy(entries[lines], line);
-			lines++;
-		}
-	}
+  size_t buffer_length = 512;
+  int line_length;
 
-	return lines;
+  char *buffer = malloc(buffer_length * sizeof(char));
+  if(buffer == NULL)
+  {
+    fprintf(stderr, "Impossibile allocare nuova memoria.\n");
+    exit(EXIT_FAILURE);
+  }
+
+  while((line_length = getline(&buffer, &buffer_length, fp)) > 0)
+  {
+    if(c_line >= line_expansion)
+    {
+      line_expansion += line_step;
+      array = realloc(array, line_expansion * sizeof(char*));
+      if(array == NULL)
+      {
+        fprintf(stderr, "Impossibile riallocare la memoria.\n");
+        exit(EXIT_FAILURE);
+      }
+    }
+    array[c_line] = malloc(line_length    );
+    if(array[c_line] == NULL)
+    {
+      fprintf(stderr, "Impossibile allocare nuova memoria.\n");
+      exit(EXIT_FAILURE);
+    }
+
+    chomp(buffer);
+    strcpy(array[c_line], buffer);
+    c_line++;
+  }
+
+  *length = c_line;
+  return array;
 }
 
-void splitsearch(char array[MES][MSL], int start, int end, char *target, int r[2], int c[2], int max, int n, FILE *soutput)
+void splitsearch(char **array, int start, int end, char *target, int r[2], int c[2], int max, int n, FILE *soutput)
 {
 	// Lettura conteggio dei risultati
 	int c_count = 0;
