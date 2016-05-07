@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
     fprintf(soutput, "\n===");
     if(count >= max)                            // se e' stato raggiunto il
         fprintf(soutput, "LIMITE RAGGIUNTO. "); // limite imposto si notifica
-    fprintf(soutput, "FINITO===\n\n");
+    fprintf(soutput, "HO TROVATO %d RISULTATI===\n\n", count);
     // Se non sono stati trovati risultati stampo 0
     if(count < 1)
     {

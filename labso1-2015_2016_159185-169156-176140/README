@@ -7,5 +7,58 @@
 
                         Gilmozzi   Toniatti   Valentini
                          Andrea     Carlo      Mattia
+                         169156     176140     159185
 
-Ce la raccontiamo sto pome.
+
+
+Descrizione
+===========
+Il programma ricerca un elemento all'interno di un file e restituisce le righe
+dove è stato trovato.
+Se non risulta nessuna corrispondenza restituisce 0.
+
+
+Utilizzo
+===========
+Il programma ha bisogno di due argomenti obbligatori, la stringa da cercare e 
+il percorso di file di input. Permette inoltre di specificare un file di output
+per il salvataggio dei risultati, un limite massimo di risultati da cercare e
+di visualizzare l'andamento dei processi con una stampa a video.
+
+usage:    splitsearch <-t stringa_di_ricerca> <-i input_file> 
+          						[-o output_file] [-m max_risultati] [-v]
+
+Parametri
+
+   -t        La stringa da cercare
+   -i        Il file sul quale si vuole eseguire la ricerca
+Opzionali
+   -o        Il file dove salvare l' output
+   -m        Il numero massimo di risultati da trovare
+   -v        Stampa a schermo una descrizione del processo di ricerca
+
+
+Note
+===========
+Il programma utilizza delle pipe per la comunicazione tra processi e quindi ha
+dei limiti dovuti alla grandezza che può variare a seconda della versione del
+kernel.
+
+
+Migliorie
+===========
+* gestisce gli argomenti con dei marcatori senza                           (SI)
+  usare la posizione come filtro
+* gestisce dati numerici non interi                                        (SI)
+* gestisce dati di tipo stringa                                            (SI)
+* mostra il progresso delle azioni                                         (SI)
+* gestisce un'opzione per il numero massimo di                             (SI)
+  risultati
+* gestisce l'impossibilità di generare nuovi                               (NI)
+  processi
+
+Personali
+* gestisce un'opzione per la stampa del progresso                          (SI)
+  delle azioni
+* gestisce la possibilità di decidere se stampare                          (SI)
+  i risultati a video o in un file di output
