@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
             }
         }
         // [-v]
-        else if (strcmp(argv[i], "-v") == 0
+        else if (strcmp(argv[i], "-v") == 0)
         {
             soutput = stdout;           // Stream di progresso su <stdout>
         }
