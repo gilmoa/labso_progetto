@@ -10,7 +10,7 @@ help :
 	@echo "   test1   - test su file lungo con massimo 10 risultati."
 	@echo "   test2   - test descrittivo su file corto."
 	@echo "   test3   - test descrittivo su file corto con massimo 2 risultati."
-	@echo "   test    - esegue build e tre casi di test caso di test."
+	@echo "   test    - esegue build e tre casi di test."
 
 build/% : src/%.c
 	$(CC) $^ -o $@
