@@ -4,8 +4,8 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#define MSL 512		// Lunghezza massima righe in lettura.
-#define MES 8192  // Numero massimo di righe leggibili dal file.
+// Stampa usage generico.
+void print_usage(char *ex_name);
 
 // Rimuove un eventuale carattere newline dalla stringa e si assicura sia
 // '\0' terminata.
@@ -37,11 +37,14 @@ int main(int argc, char *argv[])
 	char *input_file;				// file di input
 	char *output_file;			// file di output
 
-	int max = MES;					// numero massimo di risultati
+	int max;								// numero massimo di risultati
 
 	// FLAGs per argomenti obbligatori
 	int targetF = 0;
 	int input_fileF = 0;
+
+	// FLAGs per argomenti opzionali
+	int maxF = 0;
 
 	// Descrittore per l'output a file o a schermo
 	FILE *soutput_file = stdout;										// default a <stdout>
@@ -50,7 +53,7 @@ int main(int argc, char *argv[])
 	if((soutput = fopen("/dev/null", "w")) == NULL)	// default a </dev/null>
 	{
 		perror("/dev/null");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	// Verifica degli argomenti del programma
@@ -59,18 +62,19 @@ int main(int argc, char *argv[])
 		// <-i input file>
 		if (strcmp(argv[i], "-i") == 0)
 		{
-			input_fileF = 1;					// Argomento necessario presente
+			input_fileF++;						// Argomento necessario presente
 			input_file = argv[++i];   // Assegnamento percorso file di input
 		}
 		// <-t target>
 		else if (strcmp(argv[i], "-t") == 0)
 		{
-			targetF = 1;							// Argomento necessario presente
+			targetF++;								// Argomento necessario presente
 			target = argv[++i];				// Assegnamento obbiettivo di ricerca
 		}
-		// [-m risultati_max]
+		// [-m max_risultati]
 		else if (strcmp(argv[i], "-m") == 0)
 		{
+			maxF++;
 			max = atoi(argv[++i]);		// Assegnamento valore massimo opzionale
 		}
 		// [-o output_file]
@@ -82,7 +86,7 @@ int main(int argc, char *argv[])
 			if((soutput_file = fopen(output_file, "w")) == NULL)
 			{
 				perror(output_file);
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 		}
 		// [-v]
@@ -93,16 +97,16 @@ int main(int argc, char *argv[])
 		// Gestione argomenti errati. Stampa usage.
 		else
 		{
-			printf("usage: \t%s <-t stringa_di_ricerca> <-i input_file> [-o output_file]\n\t[-m risultati_max] [-v]\n", argv[0]);
-			exit(1);
+			print_usage(argv[0]);
+			exit(EXIT_SUCCESS);
 		}
 	}
 
 	// Gestione mancanza argomenti obbligatori. Stampa usage.
-	if((input_fileF == 0) || (targetF == 0))
+	if(!input_fileF || !targetF)
 	{
-		printf("usage: \t%s <-t stringa_di_ricerca> <-i input_file> [-o output_file]\n\t[-m risultati_max] [-v]\n", argv[0]);
-		exit(1);
+		print_usage(argv[0]);
+		exit(EXIT_SUCCESS);
 	}
 
 	//
@@ -121,27 +125,30 @@ int main(int argc, char *argv[])
 	if(pipe(rp) == -1)
 	{
 		perror("Pipe");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	// Inizializzazione pipe del conteggio
 	if(pipe(cp) == -1)
 	{
 		perror("Pipe");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	// Apertura file di input
 	if((fp = fopen(input_file, "r")) == NULL)
 	{
 		perror(input_file);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	// Lettura file di input nell'array lines
 	int n_lines;
 	lines = get_strings_from_file(fp, &n_lines);
+
 	fclose(fp);		// Chiusura file di input
+
+	if(!maxF) max = n_lines;				// Valore di default di max
 
 	// Scrittura in pipe del count iniziale
 	int count = 0;
@@ -170,7 +177,7 @@ int main(int argc, char *argv[])
 	if(count < 1)
 	{
 		fprintf(soutput_file, "0\n");
-		exit(0);
+		exit(EXIT_SUCCESS);
 	}
 
 	// Altrimenti leggo e scrivo ogni riga trovata nella pipe dei risultati
@@ -183,7 +190,19 @@ int main(int argc, char *argv[])
 		count--;
 	}
 
-	exit(0);
+	exit(EXIT_SUCCESS);
+}
+
+void print_usage(char *ex_name)
+{
+	printf("%-10s%s <-t stringa_di_ricerca> <-i input_file> \n%-10s[-o output_file] [-m max_risultati] [-v]\n\n", "usage:", ex_name, " ");
+	printf("Parametri\n\n");
+	printf("   %-9s La stringa da cercare\n", "-t");
+	printf("   %-9s Il file sul quale si vuole eseguire la ricerca\n", "-i");
+	printf("Opzionali\n");
+	printf("   %-9s Il file dove salvare l' output\n", "-o");
+	printf("   %-9s Il numero massimo di risultati da trovare\n", "-m");
+	printf("   %-9s Stampa a schermo una descrizione del processo di ricerca\n", "-v");
 }
 
 void chomp(char *s)
@@ -304,13 +323,13 @@ void splitsearch(char **array, int start, int end, char *target, int r[2], int c
 			if(pid_figlio < 0)
 			{
 				perror("Unable to fork");
-				exit(1);
+				exit(EXIT_FAILURE);
 			}
 			// Se il nuovo processo e' figlio
 			else if(pid_figlio == 0)
 			{
 				splitsearch(array, start, mid, target, r, c, max, n, soutput);
-				exit(0);
+				exit(EXIT_SUCCESS);
 			}
 			// Se il processo e' lo stesso
 			else
