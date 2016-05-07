@@ -4,6 +4,9 @@
 #include <string.h>
 #include <sys/wait.h>
 
+#define READ 0
+#define WRITE 1
+
 // Stampa usage generico.
 void print_usage(char *ex_name);
 
@@ -117,7 +120,7 @@ int main(int argc, char *argv[])
 	char **lines;						// array per le stringhe lette dal file
 	FILE *fp;								// descrittore file di input
 
-	// Inizzializzazione descrittori pipe
+	// Inizializzazione descrittori pipe
 	int rp[2];							// pipe per i risultati
 	int cp[2];							// pipe per il conteggio
 
@@ -152,7 +155,7 @@ int main(int argc, char *argv[])
 
 	// Scrittura in pipe del count iniziale
 	int count = 0;
-	write(cp[1], &count, sizeof(count));
+	write(cp[WRITE], &count, sizeof(count));
 
 	// Definizione formato della modalita' descrittiva
 	fprintf(soutput, "--------------------\n[PID] Ricerca: <inizio - fine>\n--------------------\n");
@@ -162,7 +165,7 @@ int main(int argc, char *argv[])
 	splitsearch(lines, 0, n_lines - 1, target, rp, cp, max, n, soutput);
 
 	// Aggiornamento numero di risultati dopo la ricerca
-	read(cp[0], &count, sizeof(count));
+	read(cp[READ], &count, sizeof(count));
 
 	// Solo per modalita' descrittiva (MD)
 	// Stampa fine del processo
@@ -184,7 +187,7 @@ int main(int argc, char *argv[])
 	while(count > 0)
 	{
 		int n_line = 0;
-		read(rp[0], &n_line, sizeof(n_line));
+		read(rp[READ], &n_line, sizeof(n_line));
 
 		fprintf(soutput_file, "%d\n", n_line);
 		count--;
@@ -217,15 +220,17 @@ void chomp(char *s)
 
 char **get_strings_from_file(FILE *fp, int *length)
 {
+	// Inizializzazione variabili utili
   static char **array;
 
-  int c_line = 0;
-  int line_step = 2;
-  int line_expansion = 0;
+  int c_line = 0;										// Conteggio di riga
+  int line_step = 128;							// Incremento grandezza array a step di 128
+  int line_expansion = 0;						// Grandezza dell' array
 
-  size_t buffer_length = 512;
-  int line_length;
+  size_t buffer_length = 512;				// Grandezza iniziale del buffer
+  int line_length;									// Lunghezza della linea
 
+	// Inizializzazione buffer
   char *buffer = malloc(buffer_length * sizeof(char));
   if(buffer == NULL)
   {
@@ -233,8 +238,10 @@ char **get_strings_from_file(FILE *fp, int *length)
     exit(EXIT_FAILURE);
   }
 
+	// Lettura file riga per riga
   while((line_length = getline(&buffer, &buffer_length, fp)) > 0)
   {
+		// Se serve piu' memoria viene riallocata con step di line_step
     if(c_line >= line_expansion)
     {
       line_expansion += line_step;
@@ -245,6 +252,7 @@ char **get_strings_from_file(FILE *fp, int *length)
         exit(EXIT_FAILURE);
       }
     }
+		// Inizializzazione memoria per riga nell' array
     array[c_line] = malloc(line_length    );
     if(array[c_line] == NULL)
     {
@@ -252,11 +260,13 @@ char **get_strings_from_file(FILE *fp, int *length)
       exit(EXIT_FAILURE);
     }
 
+		// La riga viene copiata nell' array
     chomp(buffer);
     strcpy(array[c_line], buffer);
     c_line++;
   }
 
+	// length contiene il numero totale di righe
   *length = c_line;
   return array;
 }
@@ -265,13 +275,13 @@ void splitsearch(char **array, int start, int end, char *target, int r[2], int c
 {
 	// Lettura conteggio dei risultati
 	int c_count = 0;
-	read(c[0], &c_count, sizeof(c_count));
+	read(c[READ], &c_count, sizeof(c_count));
 
 	// Se e' stato raggiunto il limite di risultati
 	// non faccio altro
 	if(c_count >= max)
 	{
-		write(c[1], &c_count, sizeof(c_count));
+		write(c[WRITE], &c_count, sizeof(c_count));
 	}
 	else
 	{
@@ -291,17 +301,17 @@ void splitsearch(char **array, int start, int end, char *target, int r[2], int c
 			{
 				// Inserimento del numero di riga alla pipe dei risultati
 				int found = start + 1;
-				write(r[1], &found, sizeof(found));
+				write(r[WRITE], &found, sizeof(found));
 
 				// Aggiornamento del contatore nella pipe del conteggio
 				c_count += 1;
-				write(c[1], &c_count, sizeof(c_count));
+				write(c[WRITE], &c_count, sizeof(c_count));
 				fprintf(soutput, "%10s.\n", " TROVATO");			// (MD)
 			}
 			else
 			{
 				fprintf(soutput, "\n");				// (MD)
-				write(c[1], &c_count, sizeof(c_count));
+				write(c[WRITE], &c_count, sizeof(c_count));
 			}
 		}
 		else
@@ -311,7 +321,7 @@ void splitsearch(char **array, int start, int end, char *target, int r[2], int c
 
 			fprintf(soutput, "[%5d] Ricerca: <%i - %i>.\n", getpid(), start + 1,
 			end + 1);									// (MD)
-			write(c[1], &c_count, sizeof(c_count));
+			write(c[WRITE], &c_count, sizeof(c_count));
 
 			// Calcolo punto medio del gruppo di analisi
 			int mid = (start + end) / 2;
